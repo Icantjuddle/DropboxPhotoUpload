@@ -29,6 +29,8 @@ def main():
         raise Exception("Rootdir doesn't exist")
     dbx = dropbox.Dropbox(args.token, user_agent="__DropboxUploader/1.0")
 
+    present_files = build_cache(dbx, dest_base)
+
     skipped_files: List[Path] = []
     excepted_files: List[Path] = []
 
@@ -41,7 +43,7 @@ def main():
             if image_type is None:
                 skipped_files.append(f)
                 continue
-            future_to_file[executor.submit(upload_task, dbx, f, image_type, rootdir, dest_base)] = f
+            future_to_file[executor.submit(upload_task, dbx, f, image_type, rootdir, dest_base, present_files)] = f
 
         for future in concurrent.futures.as_completed(future_to_file):
             file = future_to_file[future]
@@ -58,11 +60,25 @@ def main():
     print('\n'.join(str(p) for p in excepted_files))
 
 
+def build_cache(dbx, upload_base: Path) -> frozenset:
+    entries = set()
+    res = dbx.files_list_folder(str(upload_base), recursive=True)
+    for entry in res.entries:
+        entries.add(entry.path_lower)
+    while res.has_more:
+        res = dbx.files_list_folder_continue(res.cursor)
+        for entry in res.entries:
+            entries.add(entry.path_lower)
 
-def upload_task(dbx, file: Path, im_type,  local_base: Path, upload_base:Path):
-    dest_path = upload_base / file.relative_to(local_base).with_suffix('.jpg')
+    return frozenset(entries)
+
+
+def upload_task(dbx, file: Path, im_type, local_base: Path, upload_base:Path, present_files):
+    dest_path = str(upload_base / file.relative_to(local_base).with_suffix('.jpg'))
+    if dest_path.lower() in present_files:
+        return
     data = file.read_bytes() if isinstance(im_type, image.Jpeg) else convert(file)
-    upload_to_dropbox(dbx, str(dest_path), data)
+    upload_to_dropbox(dbx, dest_path, data)
 
 
 def convert(src: Path) -> bytes:
