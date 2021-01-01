@@ -30,6 +30,7 @@ def main():
     dbx = dropbox.Dropbox(args.token, user_agent="__DropboxUploader/1.0")
 
     present_files = build_cache(dbx, dest_base)
+    print("Cache built, found %d files." % len(present_files))
 
     skipped_files: List[Path] = []
     excepted_files: List[Path] = []
