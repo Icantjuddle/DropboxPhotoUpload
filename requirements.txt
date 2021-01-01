@@ -1,0 +1,10 @@
+certifi==2020.12.5
+chardet==4.0.0
+dropbox==11.0.0
+filetype==1.0.7
+idna==2.10
+ply==3.11
+requests==2.25.1
+six==1.15.0
+stone==3.2.1
+urllib3==1.26.2
