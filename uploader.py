@@ -13,13 +13,18 @@ parser = argparse.ArgumentParser(description='Sync convert all images in given d
 parser.add_argument('folder', help='Folder name in your Dropbox')
 parser.add_argument('rootdir', help='Local directory to use')
 parser.add_argument('token', help='Dropbox sdk token')
+parser.add_argument('--temp_dir', help='A temp dir to use') 
 
+_ENV = {
+    **os.environ, 
+    "MAGICK_THREAD_LIMIT": "1",
+    "MAGICK_MEMORY_LIMIT": "2GB",
+}
 
 def main():
     args = parser.parse_args()
-    print(args.folder)
-    print(args.rootdir)
-    print(args.token)
+    print("Uploading to: ", args.folder)
+    print("Reading from: ", args.rootdir)
 
     dest_base = Path(args.folder)
     if not dest_base.is_absolute():
@@ -28,6 +33,9 @@ def main():
     if not rootdir.exists():
         raise Exception("Rootdir doesn't exist")
     dbx = dropbox.Dropbox(args.token, user_agent="__DropboxUploader/1.0")
+
+    if args.temp_dir is not None:
+        _ENV["MAGICK_TEMPORARY_PATH"] = args.temp_dir
 
     present_files = build_cache(dbx, dest_base)
     print("Cache built, found %d files." % len(present_files))
@@ -90,7 +98,7 @@ def upload_task(dbx, file: Path, im_type, local_base: Path, upload_base:Path, pr
 
 
 def convert(src: Path) -> bytes:
-    return subprocess.run(["convert", '-quality', '97', str(src), 'jpeg:-'], capture_output=True, check=True).stdout
+    return subprocess.run(["convert", '-quality', '97', str(src), 'jpeg:-'], capture_output=True, check=True, env=_ENV).stdout
 
 
 def upload_to_dropbox(dbx, path: str, data: bytes):
