@@ -76,9 +76,16 @@ def build_cache(dbx, upload_base: Path) -> frozenset:
 def upload_task(dbx, file: Path, im_type, local_base: Path, upload_base:Path, present_files):
     dest_path = str(upload_base / file.relative_to(local_base).with_suffix('.jpg'))
     if dest_path.lower() in present_files:
+        print("Finished %s (already present)" % dest_path)
         return
-    data = file.read_bytes() if isinstance(im_type, image.Jpeg) else convert(file)
-    upload_to_dropbox(dbx, dest_path, data)
+
+    if isinstance(im_type, image.Jpeg):
+        upload_to_dropbox(dbx, dest_path, file.read_bytes())
+        print("Finsihed %s (copied)" % dest_path)
+    else:
+        upload_to_dropbox(dbx, dest_path, convert(file))
+        print("Finsihed %s (converted)" % dest_path)
+
 
 
 def convert(src: Path) -> bytes:
